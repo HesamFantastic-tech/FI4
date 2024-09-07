@@ -1,12 +1,13 @@
-from flask import Flask, render_template, request
+import os
 import pandas as pd
+from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
-        # Get form data
+        # Collect form data
         data = {
             'نام': request.form.get("first_name"),
             'نام خانوادگی': request.form.get("last_name"),
@@ -19,19 +20,32 @@ def index():
             # Add more questions as needed
         }
 
-        # Load existing data or create a new DataFrame
-        try:
-            df = pd.read_excel("smart_city_survey.xlsx")
-        except FileNotFoundError:
-            df = pd.DataFrame(columns=data.keys())
+        # Path to the Excel file
+        file_path = "smart_city_survey.xlsx"
 
-        # Append the new data and save to Excel
+        # Check if the file exists
+        if not os.path.exists(file_path):
+            # Create a new DataFrame with the data
+            df = pd.DataFrame(columns=data.keys())
+        else:
+            try:
+                # Load the existing Excel file
+                df = pd.read_excel(file_path, engine='openpyxl')
+            except Exception as e:
+                return f"Error reading Excel file: {str(e)}"
+
+        # Append the new data
         df = df.append(data, ignore_index=True)
-        df.to_excel("smart_city_survey.xlsx", index=False)
+
+        # Save the updated DataFrame to Excel
+        try:
+            df.to_excel(file_path, index=False, engine='openpyxl')
+        except Exception as e:
+            return f"Error saving Excel file: {str(e)}"
 
         return "اطلاعات شما با موفقیت ثبت شد!"
 
     return render_template("index.html")
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5007)
+    app.run(debug=True, port=5011)

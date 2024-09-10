@@ -3,48 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظرسنجی شهر هوشمند</title>
+    <title>ثبت اطلاعات</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <style>
-    </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <img src="{{ url_for('static', filename='ibam_logo.png') }}" alt="لوگوی IBAM">
-            <h1>FI4 - IBAM</h1>
-            <p>نظرسنجی در مورد شهرهای هوشمند</p>
+            <h1>ورود اطلاعات</h1>
         </div>
-        <form method="POST">
-            <label>نام:</label>
-            <input type="text" name="first_name" placeholder="نام خود را وارد کنید" required>
-            
-            <label>نام خانوادگی:</label>
-            <input type="text" name="last_name" placeholder="نام خانوادگی خود را وارد کنید" required>
-            
-            <label>شماره تلفن:</label>
-            <input type="text" name="phone_number" placeholder="شماره تلفن خود را وارد کنید" required>
-            
-            <label>آدرس جیمیل (اختیاری):</label>
-            <input type="email" name="gmail_address" placeholder="آدرس جیمیل خود را وارد کنید">
-            
-            <!-- Questions about smart cities -->
-            <label>آیا زیرساخت‌های فناوری اطلاعات در شهر شما کافی است؟</label>
-            <textarea name="question1" placeholder="پاسخ خود را وارد کنید" required></textarea>
-
-            <label>چه فناوری‌هایی در بهبود کیفیت زندگی شهروندان موثر هستند؟</label>
-            <textarea name="question2" placeholder="پاسخ خود را وارد کنید" required></textarea>
-
-            <label>نقش حمل و نقل هوشمند در شهر شما چیست؟</label>
-            <textarea name="question3" placeholder="پاسخ خود را وارد کنید" required></textarea>
-
-            <label>آیا برنامه‌ای برای مدیریت پسماند به شیوه هوشمند در شهر وجود دارد؟</label>
-            <textarea name="question4" placeholder="پاسخ خود را وارد کنید" required></textarea>
-
-            <!-- More questions can go here -->
-
-            <button type="submit">ارسال</button>
-        </form>
+            <form method="POST" action="{{ url_for('questions', question_number=1) }}">
+                <label>نام:</label>
+                <input type="text" name="first_name" placeholder="نام خود را وارد کنید" required>
+                
+                <label>نام خانوادگی:</label>
+                <input type="text" name="last_name" placeholder="نام خانوادگی خود را وارد کنید" required>
+                
+                <label>شماره تلفن:</label>
+                <input type="text" name="phone_number" placeholder="شماره تلفن خود را وارد کنید" required>
+                
+                <label>آدرس جیمیل (اختیاری):</label>
+                <input type="email" name="gmail_address" placeholder="آدرس جیمیل خود را وارد کنید">
+                
+                <button type="submit">شروع سوالات</button>
+            </form>
     </div>
 </body>
 </html>

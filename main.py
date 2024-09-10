@@ -49,7 +49,7 @@ def index():
     # For GET requests, render the form
     return render_template("index.html")
 
-questions = [
+question_list = [
     {"question": "سوال 1: زیرساخت‌های فناوری اطلاعات در صنعت شما کافی است؟", "choices": ["خیلی زیاد", "زیاد", "کم", "خیلی کم"]},
     {"question": "سوال 2: چه فناوری‌هایی در بهبود کیفیت زندگی صنعتگران موثر هستند؟", "choices": ["فناوری 1", "فناوری 2", "فناوری 3", "فناوری 4"]},
     # Add remaining 14 questions here
@@ -63,14 +63,15 @@ def questions(question_number):
         session[f"answer_{question_number}"] = answer
         
         # Redirect to next question or summary
-        if question_number < len(questions):
+        if question_number < len(question_list):
             return redirect(url_for('questions', question_number=question_number + 1))
         else:
             return redirect(url_for('summary'))
     
     # Fetch the question data
-    question_data = questions[question_number - 1]
+    question_data = question_list[question_number - 1]  # Updated to use the renamed variable
     return render_template("question.html", question=question_data['question'], choices=question_data['choices'], question_number=question_number)
+
 
 @app.route("/summary")
 def summary():
@@ -114,4 +115,4 @@ def summary():
     return render_template("summary.html", data=data)
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5007)

@@ -5,73 +5,48 @@ from flask import Flask, render_template, request, session, redirect, url_for
 app = Flask(__name__)
 app.secret_key = 'camera20'
 
+# List of questions
+questions_list = [
+    "What is your name?",
+    "What is your favorite color?",
+    "What is your age?",
+    # Add more questions as needed...
+]
+
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
-        # Collect form data
-        data = {
+        # Collect form data and store in session
+        session['user_info'] = {
             'نام': request.form.get("first_name"),
             'نام خانوادگی': request.form.get("last_name"),
             'شماره تلفن': request.form.get("phone_number"),
             'آدرس جیمیل': request.form.get("gmail_address"),
-            'سوال 1': request.form.get("question1"),
-            'سوال 2': request.form.get("question2"),
-            'سوال 3': request.form.get("question3"),
-            'سوال 4': request.form.get("question4"),
-            # Add more questions as needed
         }
-
-        # Path to the Excel file
-        file_path = "smart_city_survey.xlsx"
-
-        # Check if the file exists
-        if not os.path.exists(file_path):
-            # Create a new DataFrame with the data
-            df = pd.DataFrame(columns=data.keys())
-        else:
-            try:
-                # Load the existing Excel file
-                df = pd.read_excel(file_path, engine='openpyxl')
-            except Exception as e:
-                return f"Error reading Excel file: {str(e)}"
-
-        # Append the new data
-        df = df.append(data, ignore_index=True)
-
-        # Save the updated DataFrame to Excel
-        try:
-            df.to_excel(file_path, index=False, engine='openpyxl')
-        except Exception as e:
-            return f"Error saving Excel file: {str(e)}"
-
-        return "اطلاعات شما با موفقیت ثبت شد!"
+        # Redirect to the first question
+        return redirect(url_for('questions', question_number=1))
     
     # For GET requests, render the form
     return render_template("index.html")
 
-question_list = [
-    {"question": "سوال 1: زیرساخت‌های فناوری اطلاعات در صنعت شما کافی است؟", "choices": ["خیلی زیاد", "زیاد", "کم", "خیلی کم"]},
-    {"question": "سوال 2: چه فناوری‌هایی در بهبود کیفیت زندگی صنعتگران موثر هستند؟", "choices": ["فناوری 1", "فناوری 2", "فناوری 3", "فناوری 4"]},
-    # Add remaining 14 questions here
-]
-
-@app.route("/questions/<int:question_number>", methods=["GET", "POST"])
+@app.route('/questions/<int:question_number>', methods=['GET', 'POST'])
 def questions(question_number):
-    if request.method == "POST":
-        # Store the answer
+    # Handle POST request to save the answer and move to the next question
+    if request.method == 'POST':
         answer = request.form.get("answer")
-        session[f"answer_{question_number}"] = answer
-        
-        # Redirect to next question or summary
-        if question_number < len(question_list):
-            return redirect(url_for('questions', question_number=question_number + 1))
-        else:
-            return redirect(url_for('summary'))
-    
-    # Fetch the question data
-    question_data = question_list[question_number - 1]  # Updated to use the renamed variable
-    return render_template("question.html", question=question_data['question'], choices=question_data['choices'], question_number=question_number)
+        if answer:
+            session[f'answer_{question_number}'] = answer
+        return redirect(url_for('questions', question_number=question_number + 1))
 
+    # If question number exceeds the number of questions, redirect to the summary page
+    if question_number > len(questions_list):
+        return redirect(url_for('summary'))
+    
+    # Get the current question
+    current_question = questions_list[question_number - 1]
+    choices = ["Option 1", "Option 2", "Option 3", "Option 4"]  # Example choices for each question
+    
+    return render_template('questions.html', question=current_question, question_number=question_number, choices=choices)
 
 @app.route("/summary")
 def summary():
@@ -79,18 +54,21 @@ def summary():
     user_info = session.get('user_info', {})
     
     # Retrieve answers from the session
-    answers = {f'سوال {i}': session.get(f'answer_{i}', '') for i in range(1, len(questions) + 1)}
+    answers = {f'سوال {i}': session.get(f'answer_{i}', '') for i in range(1, len(questions_list) + 1)}
     
     # Combine user info and answers
     data = {**user_info, **answers}
     
+    # Convert the data to a DataFrame
+    new_data_df = pd.DataFrame([data])  # Wrap data in a list to ensure it's a DataFrame
+
     # Path to the Excel file
     file_path = "smart_city_survey.xlsx"
 
     # Check if the file exists
     if not os.path.exists(file_path):
-        # Create a new DataFrame with the data
-        df = pd.DataFrame(columns=data.keys())
+        # If it doesn't exist, create a new DataFrame with the new data
+        df = new_data_df
     else:
         try:
             # Load the existing Excel file
@@ -98,8 +76,9 @@ def summary():
         except Exception as e:
             return f"Error reading Excel file: {str(e)}"
 
-    # Append the new data
-    df = df.append(data, ignore_index=True)
+        # Use pd.concat to append the new data
+        new_data_df = pd.DataFrame([data])
+        df = pd.concat([df, new_data_df], ignore_index=True)
 
     # Save the updated DataFrame to Excel
     try:
@@ -109,10 +88,10 @@ def summary():
 
     # Optionally, clear the session data
     session.pop('user_info', None)
-    for i in range(1, len(questions) + 1):
+    for i in range(1, len(questions_list) + 1):
         session.pop(f'answer_{i}', None)
     
-    return render_template("summary.html", data=data)
+    return render_template("summary.html", data=data, answers=answers)
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5007)
+    app.run(debug=True, port=5022)

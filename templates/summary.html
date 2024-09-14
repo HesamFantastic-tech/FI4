@@ -12,8 +12,8 @@
             <h1>خلاصه پاسخ‌های شما</h1>
         </div>
         <ul>
-            {% for i in range(1, 17) %}
-            <li>سوال {{ i }}: {{ session["answer_" + str(i)] }}</li>
+            {% for question, answer in answers.items() %}
+              <li>{{ question }}: {{ answer }}</li>
             {% endfor %}
         </ul>
         <button onclick="window.print()">چاپ</button>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>خلاصه پاسخ‌ها</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles2.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="charts-container">
+            <img src="{{ url_for('static', filename='pie_chart.png') }}" alt="Pie Chart">
+            <img src="{{ url_for('static', filename='bar_chart.png') }}" alt="Bar Chart">
+            <img src="{{ url_for('static', filename='line_chart.png') }}" alt="Line Chart">
+        </div>
+        <div class="right">
+            <div class="header">
+                <h1>خلاصه پاسخ‌های شما</h1>
+            </div>
+            <ul>
+                {% for question, answer in data.items() %}
+                  <li>{{ question }}: {{ answer }}</li>
+                {% endfor %}
+            </ul>
+            <button onclick="window.print()">چاپ</button>
+        </div>
+    </div>
+</body>
+</html>

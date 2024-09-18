@@ -6,12 +6,13 @@
     <title>ثبت اطلاعات</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
+
 <body>
     <div class="container">
         <div class="header">
             <h1>ورود اطلاعات</h1>
         </div>
-            <form method="POST" action="{{ url_for('questions', question_number=1) }}">
+            <form method="POST" action="{{ url_for('questions', question_number=0) }}">
                 <label>نام:</label>
                 <input type="text" name="first_name" placeholder="نام خود را وارد کنید" required>
                 
@@ -23,6 +24,9 @@
                 
                 <label>آدرس جیمیل (اختیاری):</label>
                 <input type="email" name="gmail_address" placeholder="آدرس جیمیل خود را وارد کنید">
+
+                <label>سمت:</label>
+                <input type="Post" name="Post" placeholder="سمت خود را وارد کنید" required>
                 
                 <button type="submit">شروع سوالات</button>
             </form>

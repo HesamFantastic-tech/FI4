@@ -1,6 +1,9 @@
 import os
 import pandas as pd
-from flask import Flask, render_template, request, session, redirect, url_for
+import matplotlib.pyplot as plt
+import seaborn as sns
+from flask import Flask, render_template, request, session, redirect, url_for, send_file
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = 'camera20'
@@ -25,118 +28,182 @@ questions_list = [
     "چگونه می‌توان استراتژی‌های بلندمدت را برای تطابق با پیشرفت‌های فناوری به‌روز کرد؟"
 ]
 
+# Choices for each question
+choices_dict = {
+    1: [
+        "برنامه‌ریزی منابع به شیوه قدیمی",
+        "استفاده از فناوری‌های جدید",
+        "یکپارچه‌سازی سیستم‌ها",
+        "برنامه‌ریزی منابع به شیوه قدیمی",
+        "استفاده از فناوری‌های جدید",
+        "ارتقای سیستم‌ها با هوش مصنوعی"],
+    2: ["اتصال سیستم‌ها",
+        "یکپارچه‌سازی کامل",
+        "برنامه‌ریزی منابع به شیوه قدیمی",
+        "استفاده از فناوری‌های جدید",
+        "مدیریت هوشمند فرآیندها",
+        "استفاده از داده‌های تحلیلی"],
+    3: ["تحلیل داده‌ها",
+        "استفاده از ابزارهای هوشمند",
+        "بهینه‌سازی فرآیندها",
+        "برنامه‌ریزی منابع به شیوه قدیمی",
+        "استفاده از فناوری‌های جدید",
+        "یکپارچه‌سازی فناوری"],
+    4: ["افزایش انعطاف‌پذیری",
+        "ارتقای تجهیزات",
+        "برنامه‌ریزی منابع به شیوه قدیمی",
+        "استفاده از فناوری‌های جدید",
+        "استفاده از فناوری‌های جدید", "مدیریت تطبیقی"],
+    5: ["اتوماسیون کامل",
+        "استفاده از روبات‌ها",
+        "برنامه‌ریزی منابع به شیوه قدیمی",
+        "استفاده از فناوری‌های جدید",
+        "یکپارچه‌سازی فرآیندها",
+        "بهره‌وری منابع"],
+    6: ["تحلیل هوشمند منابع",
+        "بهینه‌سازی مصرف منابع",
+        "برنامه‌ریزی منابع به شیوه قدیمی",
+        "استفاده از فناوری‌های جدید",
+        "افزایش کارایی", "ارتقای سطح تطبیق"],
+    7: ["استراتژی‌های امنیتی",
+        "شبکه‌های هوشمند",
+        "برنامه‌ریزی منابع به شیوه قدیمی",
+        "استفاده از فناوری‌های جدید",
+        "پیکربندی تطبیقی",
+        "مدیریت ایمن اطلاعات"],
+    8: ["پیکربندی انعطاف‌پذیر",
+        "استفاده از داده‌ها",
+        "برنامه‌ریزی منابع به شیوه قدیمی",
+        "استفاده از فناوری‌های جدید",
+        "تحلیل تغییرات",
+        "ارتقای فناوری"],
+    9: ["موانع فناوری",
+        "نیاز به ارتباطات هوشمند",
+        "شبکه‌های لحظه‌ای",
+        "برنامه‌ریزی منابع به شیوه قدیمی",
+        "استفاده از فناوری‌های جدید",
+        "مدیریت ارتباطات"],
+    10: ["کارگاه‌های هوشمند",
+        "تطبیق فناوری",
+        "برنامه‌ریزی منابع به شیوه قدیمی",
+        "استفاده از فناوری‌های جدید",
+        "ارتقای فرآیندها",
+        "بهینه‌سازی تولید"],
+    11: ["تطبیق محاسباتی", "افزایش دقت",
+        "پیش‌بینی انحرافات",
+        "برنامه‌ریزی منابع به شیوه قدیمی",
+        "استفاده از فناوری‌های جدید",
+        "استفاده از تحلیل داده"],
+    12: ["پیش‌بینی انحرافات",
+        "ارتقای سیستم‌ها",
+        "برنامه‌ریزی منابع به شیوه قدیمی",
+        "استفاده از فناوری‌های جدید",
+        "تحلیل داده‌های هوشمند",
+        "یکپارچه‌سازی فناوری"],
+    13: ["آموزش‌های هوشمند",
+        "مهارت‌های آینده",
+        "برنامه‌ریزی منابع به شیوه قدیمی",
+        "استفاده از فناوری‌های جدید",
+        "برنامه‌ریزی آموزشی",
+        "تحلیل نیازهای آتی"],
+    14: ["آگاهی مدیریتی",
+        "استفاده از تحلیل داده",
+        "مدیریت تغییرات",
+        "برنامه‌ریزی منابع به شیوه قدیمی",
+        "استفاده از فناوری‌های جدید",
+        "ارتقای مهارت‌ها"],
+    15: ["ارتقای تعاملات تیمی",
+        "یکپارچه‌سازی تیم‌ها",
+        "برنامه‌ریزی منابع به شیوه قدیمی",
+        "استفاده از فناوری‌های جدید",
+        "مدیریت تیم‌ها",
+        "استفاده از فناوری هوشمند"],
+    16: ["استراتژی‌های فناوری",
+        "تطبیق با فناوری‌های جدید",
+        "برنامه‌ریزی منابع به شیوه قدیمی",
+        "استفاده از فناوری‌های جدید",
+        "ارتقای استراتژی‌ها",
+        "مدیریت تغییرات"]
+}
+
+# Define file paths for the charts
+chart1_path = "static/chart1.png"
+chart2_path = "static/chart2.png"
+chart3_path = "static/chart3.png"
+
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
-        # Collect form data and store in session
         session['user_info'] = {
             'نام': request.form.get("first_name"),
             'نام خانوادگی': request.form.get("last_name"),
             'شماره تلفن': request.form.get("phone_number"),
             'آدرس جیمیل': request.form.get("gmail_address"),
+            'سمت': request.form.get("Post")
         }
-        # Redirect to the first question
-        return redirect(url_for('questions', question_number=1))
-    
-    # For GET requests, render the form
+        return redirect(url_for('questions', question_number=0))
     return render_template("index.html")
+
 
 @app.route('/questions/<int:question_number>', methods=['GET', 'POST'])
 def questions(question_number):
-    # Handle POST request to save the answer and move to the next question
     if request.method == 'POST':
         answer = request.form.get("answer")
         if answer:
             session[f'answer_{question_number}'] = answer
         return redirect(url_for('questions', question_number=question_number + 1))
 
-    # If question number exceeds the number of questions, redirect to the summary page
     if question_number > len(questions_list):
         return redirect(url_for('summary'))
-    
-    # Get the current question
+
     current_question = questions_list[question_number - 1]
-#     choice = {"q1":[
-#         ""برنامه‌ریزي منابع‌ و فرآیندهاي تولید فنی‌ در واحدهاي جداگانه‌ بر اساس روشهاي غیر رسمی‌ و ابتکاري مدیریت‌ و اجرا می‌شوند."",
-#         ""برنامه‌ریزي منابع‌ و فرآیندهاي تولید فنی‌ در واحدهاي با استفاده از فناوري عملیاتی‌ و سیستم‌هاي فناوري اطلاعات مدیریت‌ و اجرامی‌شوند."",
-#         ""برنامه‌ریزي منابع‌ و فرآیندهاي تولید فنی‌ در واحدهاي با استفاده از فناوري عملیاتی‌ و سیستم‌هاي فناوري اطلاعات مدیریت‌ و اجرامی‌شوند."",
-#         ""سیستم‌هاي فناوري عملیاتی‌ و فناوري اطلاعات برنامه‌ریزي منابع‌ و فرآیندهاي تولید فنی‌ که‌ به‌ صورت رسمی‌ یکپارچه‌ شده اند رامدیریت‌ می‌کنند. اما تبادل اطلاعات و داده ها از روش هاي از پیش‌ تعیین‌ شده توسط‌ انسان مدیریت‌ می‌شود."",
-#         ""سیستم‌هاي فناوري عملیاتی‌ و فناوري اطلاعات برنامه‌ریزي منابع‌ و فرآیندهاي تولید فنی‌ که‌ به‌ صورت رسمی‌ یکپارچه‌ شده اند رامدیریت‌ می‌کنند. اما تبادل اطلاعات و داده ها از روش هاي از پیش‌ تعیین‌ شده توسط‌ انسان مدیریت‌ می‌شود."",
-#         ""سیستم‌هاي فناوري اطلاعات و عملیاتی‌ به‌ صورت یکپارچه‌ در آمده و از طریق‌ بینش‌ حاصل‌ از تحلیل‌ دادهها فرآیندها بهینه‌ سازيمی‌شوند.""
-# ],
-#                "q2":[
-#         ""فرآیندهای کسب و کار در واحدهای جداگانه بر اساس روشهای غیر رسمی و ابتکاری مدیریت واجرا میشوند."",
-#         ""فرآ یندهای کسب و کار در واحدهای جداگانه بر اساس مجموعه ای از دستورالعملهای رسمی تعریف شده مدیریت و اجرا میشوند."",
-#         ""فرآیندهای کسب و کار در واحدهای جداگانه به وسیله ی سیستمهای فناوری اطلاعا ت مدیریت و اجرا میشوند."",
-#         ""سیستمهای فناوری اطلاعات فرآ یندهای کسب و کار را که به صورت رسمی متصل هستند مدیریت و اجرا میکنند. اما تبادل داده و اطلاعات بین بخشهای مختلف از طریق روشهای مشخص به وسیله ی انسان انجام میشود."",
-#         ""سیستمهای فناوری اطلاعات فرآ یندهای کسب و کار را که به صورت رسمی متصل هستند مدیریت و اجرا میکنند. اما تبادل داده و اطلاعات بین بخشهای مختلف از طریق روشهای مشخص به وسیله ی رایانه انجام میشود."",
-#         ""سیستمهای فناوری اطلاعا ت به صورت یکپارچه فرآ یندها را مدیریت و به وسیله ی نگرش حاصل از تحلیل داده بهینه سازی میکنند.""
-# ],
-#                "q3":[],
-#                "q4":[],
-#                "q5":[],
-#                "q6":[],
-#                "q7":[],
-#                "q8":[],
-#                "q9":[],
-#                "q10":[],
-#                "q11":[],
-#                "q12":[],
-#                "q13":[],
-#                "q14":[],
-#                "q15":[],
-#                "q16":[]
-#                }
-#     for i in range(1,17)
-#         for i in choice["q"]
-    choices = ["0-", "1-", "2-", "3-", "4-", "5-"]  # Example choices for each question
+    h = "\u200c"
+    choices = [f"{idx}-{option.replace(h, '')}" for idx, option in enumerate(choices_dict[question_number])]
     
     return render_template('questions.html', question=current_question, question_number=question_number, choices=choices)
 
-@app.route("/summary")
+
+@app.route("/summary_with_charts")
 def summary():
-    # Retrieve user information from the session
-    user_info = session.get('user_info', {})
-    
-    # Retrieve answers from the session
-    answers = {f'سوال {i}': session.get(f'answer_{i}', '') for i in range(1, len(questions_list) + 1)}
-    
-    # Combine user info and answers
-    data = {**user_info, **answers}
-    
-    # Convert the data to a DataFrame
-    new_data_df = pd.DataFrame([data])  # Wrap data in a list to ensure it's a DataFrame
-
-    # Path to the Excel file
+    # Load survey data from Excel
     file_path = "smart_city_survey.xlsx"
+    df = pd.read_excel(file_path, engine='openpyxl')
 
-    # Check if the file exists
-    if not os.path.exists(file_path):
-        # If it doesn't exist, create a new DataFrame with the new data
-        df = new_data_df
-    else:
-        try:
-            # Load the existing Excel file
-            df = pd.read_excel(file_path, engine='openpyxl')
-        except Exception as e:
-            return f"Error reading Excel file: {str(e)}"
+    # Create charts based on the data
+    create_charts(df)
 
-        # Use pd.concat to append the new data
-        new_data_df = pd.DataFrame([data])
-        df = pd.concat([df, new_data_df], ignore_index=True)
+    # Retrieve user info from session
+    user_info = session.get('user_info', {})
+    answers = {f'سوال {i}': session.get(f'answer_{i}', '') for i in range(1, len(questions_list) + 1)}
 
-    # Save the updated DataFrame to Excel
-    try:
-        df.to_excel(file_path, index=False, engine='openpyxl')
-    except Exception as e:
-        return f"Error saving Excel file: {str(e)}"
+    data = {**user_info, **answers}
 
-    # Optionally, clear the session data
-    session.pop('user_info', None)
-    for i in range(1, len(questions_list) + 1):
-        session.pop(f'answer_{i}', None)
+    # Render summary page with the charts
+    return render_template("summary_with_charts.html", data=data)
+
+
+def create_charts(df):
     
-    return render_template("summary.html", data=data, answers=answers)
+    # Bar Chart
+    plt.figure(figsize=(8, 6))
+    plt.bar(labels, sorted_choices, color='skyblue')
+    plt.title('User Choices Distribution (Bar Chart)')
+    plt.savefig('static/bar_chart.png')
+
+    # Pie Chart
+    plt.figure(figsize=(8, 6))
+    plt.pie(sorted_choices, labels=labels, autopct='%1.1f%%', startangle=140)
+    plt.title('User Choices Distribution (Pie Chart)')
+    plt.savefig('static/pie_chart.png')
+
+    # Line Chart
+    plt.figure(figsize=(8, 6))
+    plt.plot(labels, sorted_choices, marker='o', color='green')
+    plt.title('User Choices Trend (Line Chart)')
+    plt.savefig('static/line_chart.png')
+
+    plt.show()
+
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5026)
+    app.run(debug=True, port=5004)

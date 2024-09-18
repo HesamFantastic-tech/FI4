@@ -1,5 +1,6 @@
 body {
     background-image: url('your-background-image.jpg');
+    
     background-size: cover;
     background-position: center;
     height: 100vh;

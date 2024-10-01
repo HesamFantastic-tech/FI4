@@ -8,22 +8,47 @@
 </head>
 <body>
     <div class="container">
-        <div class="charts-container">
-            <img src="{{ url_for('static', filename='pie_chart.png') }}" alt="Pie Chart">
-            <img src="{{ url_for('static', filename='bar_chart.png') }}" alt="Bar Chart">
-            <img src="{{ url_for('static', filename='line_chart.png') }}" alt="Line Chart">
-        </div>
-        <div class="right">
-            <div class="header">
-                <h1>خلاصه پاسخ‌های شما</h1>
-            </div>
+        <h2>خلاصه پاسخ‌ها</h2>
+        {% for question_num, counts in choice_counts.items() %}
+            <h3>سوال {{ question_num }}</h3>
             <ul>
-                {% for question, answer in data.items() %}
-                  <li>{{ question }}: {{ answer }}</li>
+                {% for choice, count in counts.items() %}
+                    <li>{{ choice }}: {{ count }} بار انتخاب شده است</li>
                 {% endfor %}
             </ul>
-            <button onclick="window.print()">چاپ</button>
+        {% endfor %}
+        
+        <div class="charts-section">
+            <div class="chart-container">
+                <h2>نمودار دایره‌ای</h2>
+                <img src="{{ url_for('static', filename='pie_chart.png') }}" alt="Pie Chart">
+            </div>
+            <div class="chart-container">
+                <h2>نمودار ستونی</h2>
+                <img src="{{ url_for('static', filename='bar_chart.png') }}" alt="Bar Chart">
+            </div>
+            <div class="chart-container">
+                <h2>نمودار خطی</h2>
+                <img src="{{ url_for('static', filename='line_chart.png') }}" alt="Line Chart">
+            </div>
         </div>
+
+        <div class="choice-counts">
+            <h2>تعداد انتخاب‌ها برای هر سوال</h2>
+            <ul>
+                {% for question, counts in choice_counts.items() %}
+                <li>سوال {{ question }}: 
+                    <ul>
+                        {% for choice, count in counts.items() %}
+                        <li>{{ choice }}: {{ count }}</li>
+                        {% endfor %}
+                    </ul>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        <a href="{{ url_for('index') }}" class="button">بازگشت به صفحه اصلی</a>
     </div>
 </body>
 </html>

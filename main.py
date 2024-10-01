@@ -2,8 +2,8 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from flask import Flask, render_template, request, session, redirect, url_for, send_file
-from datetime import datetime
+from flask import Flask, render_template, request, session, redirect, url_for
+from collections import Counter
 
 app = Flask(__name__)
 app.secret_key = 'camera20'
@@ -126,11 +126,6 @@ choices_dict = {
         "مدیریت تغییرات"]
 }
 
-# Define file paths for the charts
-chart1_path = "static/chart1.png"
-chart2_path = "static/chart2.png"
-chart3_path = "static/chart3.png"
-
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
@@ -141,7 +136,7 @@ def index():
             'آدرس جیمیل': request.form.get("gmail_address"),
             'سمت': request.form.get("Post")
         }
-        return redirect(url_for('questions', question_number=0))
+        return redirect(url_for('questions', question_number=1))  # Start from first question
     return render_template("index.html")
 
 
@@ -151,59 +146,56 @@ def questions(question_number):
         answer = request.form.get("answer")
         if answer:
             session[f'answer_{question_number}'] = answer
-        return redirect(url_for('questions', question_number=question_number + 1))
-
-    if question_number > len(questions_list):
-        return redirect(url_for('summary'))
+        if question_number < len(questions_list):
+            return redirect(url_for('questions', question_number=question_number + 1))
+        else:
+            return redirect(url_for('summary'))  # Go to summary after the last question
 
     current_question = questions_list[question_number - 1]
-    h = "\u200c"
-    choices = [f"{idx}-{option.replace(h, '')}" for idx, option in enumerate(choices_dict[question_number])]
-    
+    choices = choices_dict[question_number]
+
     return render_template('questions.html', question=current_question, question_number=question_number, choices=choices)
 
 
-@app.route("/summary_with_charts")
+@app.route("/summary")
 def summary():
-    # Load survey data from Excel
-    file_path = "smart_city_survey.xlsx"
-    df = pd.read_excel(file_path, engine='openpyxl')
-
-    # Create charts based on the data
-    create_charts(df)
-
     # Retrieve user info from session
     user_info = session.get('user_info', {})
     answers = {f'سوال {i}': session.get(f'answer_{i}', '') for i in range(1, len(questions_list) + 1)}
 
+    # Count responses
+    choice_counts = {i: Counter() for i in range(1, len(questions_list) + 1)}
+    
+    for i in range(1, len(questions_list) + 1):
+        answer = session.get(f'answer_{i}')
+        if answer:
+            choice_counts[i][answer] += 1
+
+    # Prepare data for charts
+    # For example, let's create a pie chart based on the counts for the first question
+    create_charts(choice_counts)
+
+    # Combine user info and answers for display
     data = {**user_info, **answers}
 
-    # Render summary page with the charts
-    return render_template("summary_with_charts.html", data=data)
+    return render_template("summary_with_charts.html", data=data, choice_counts=choice_counts)
 
-
-def create_charts(df):
+def create_charts(choice_counts):
+    # Example: Create a pie chart for the first question
+    labels = list(choice_counts[1].keys())  # Choices for question 1
+    sizes = list(choice_counts[1].values())  # Counts for each choice
     
-    # Bar Chart
-    plt.figure(figsize=(8, 6))
-    plt.bar(labels, sorted_choices, color='skyblue')
-    plt.title('User Choices Distribution (Bar Chart)')
-    plt.savefig('static/bar_chart.png')
+    # Create a pie chart
+    plt.figure(figsize=(6, 6))
+    plt.pie(sizes, labels=labels, autopct='%1.1f%%')
+    plt.title('نمودار دایره‌ای برای سوال 1')
+    plt.savefig(os.path.join('static', 'pie_chart.png'))
+    plt.close()
+    
+    # You can create similar charts for other questions as needed
 
-    # Pie Chart
-    plt.figure(figsize=(8, 6))
-    plt.pie(sorted_choices, labels=labels, autopct='%1.1f%%', startangle=140)
-    plt.title('User Choices Distribution (Pie Chart)')
-    plt.savefig('static/pie_chart.png')
 
-    # Line Chart
-    plt.figure(figsize=(8, 6))
-    plt.plot(labels, sorted_choices, marker='o', color='green')
-    plt.title('User Choices Trend (Line Chart)')
-    plt.savefig('static/line_chart.png')
-
-    plt.show()
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5004)
+    app.run(debug=True, port=5025)

@@ -15,14 +15,22 @@ Already a pro? Just edit this README.md and make it your own. Want to make it ea
 
 ```
 cd existing_repo
+<<<<<<< HEAD
 git remote add origin http://daabd22b4f42/HesamAhmadi-Fantastic/fi4.git
+=======
+git remote add origin https://gitlab.entekhabgroup.com/713713/fi4.git
+>>>>>>> 5fea1c497063cb02cd136556ebec04fe4ad61562
 git branch -M main
 git push -uf origin main
 ```
 
 ## Integrate with your tools
 
+<<<<<<< HEAD
 - [ ] [Set up project integrations](http://daabd22b4f42/HesamAhmadi-Fantastic/fi4/-/settings/integrations)
+=======
+- [ ] [Set up project integrations](https://gitlab.entekhabgroup.com/713713/fi4/-/settings/integrations)
+>>>>>>> 5fea1c497063cb02cd136556ebec04fe4ad61562
 
 ## Collaborate with your team
 
@@ -37,7 +45,11 @@ git push -uf origin main
 Use the built-in continuous integration in GitLab.
 
 - [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
+<<<<<<< HEAD
 - [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
+=======
+- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
+>>>>>>> 5fea1c497063cb02cd136556ebec04fe4ad61562
 - [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
 - [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
 - [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
@@ -46,9 +58,16 @@ Use the built-in continuous integration in GitLab.
 
 # Editing this README
 
+<<<<<<< HEAD
 When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
 
 ## Suggestions for a good README
+=======
+When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+
+## Suggestions for a good README
+
+>>>>>>> 5fea1c497063cb02cd136556ebec04fe4ad61562
 Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
 
 ## Name

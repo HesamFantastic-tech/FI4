@@ -1,197 +1,94 @@
-@import url('https://fonts.googleapis.com/css?family=Exo:400,700');
-
-*{
-    margin: 0px;
-    padding: 0px;
+/* General body and typography */
+body {
+    font-family: 'Vazirmatn', sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    direction: rtl; /* Right-to-left for Persian */
 }
 
-body{
-    font-family: 'Exo', sans-serif;
-}
-
-
-.context {
+/* Container styling */
+.container {
+    background-color: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    max-width: 900px;
     width: 100%;
-    position: absolute;
-    top:50vh;
-    
-}
-
-.context h1{
     text-align: center;
-    color: #fff;
-    font-size: 50px;
 }
 
-
-.area{
-    background: #4e54c8;  
-    background: -webkit-linear-gradient(to left, #8f94fb, #4e54c8);  
-    width: 100%;
-    height:100vh;
-}
-
-
-.circles{
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-}
-
-.circles li{
-    position: absolute;
-    display: block;
-    list-style: none;
-    width: 20px;
-    height: 20px;
-    background: rgba(255, 255, 255, 0.2);
-    animation: animate 25s linear infinite;
-    bottom: -150px;
-    
-}
-
-.circles li:nth-child(1){
-    left: 25%;
-    width: 80px;
-    height: 80px;
-    animation-delay: 0s;
-}
-
-
-.circles li:nth-child(2){
-    left: 10%;
-    width: 20px;
-    height: 20px;
-    animation-delay: 2s;
-    animation-duration: 12s;
-}
-
-.circles li:nth-child(3){
-    left: 70%;
-    width: 20px;
-    height: 20px;
-    animation-delay: 4s;
-}
-
-.circles li:nth-child(4){
-    left: 40%;
-    width: 60px;
-    height: 60px;
-    animation-delay: 0s;
-    animation-duration: 18s;
-}
-
-.circles li:nth-child(5){
-    left: 65%;
-    width: 20px;
-    height: 20px;
-    animation-delay: 0s;
-}
-
-.circles li:nth-child(6){
-    left: 75%;
-    width: 110px;
-    height: 110px;
-    animation-delay: 3s;
-}
-
-.circles li:nth-child(7){
-    left: 35%;
-    width: 150px;
-    height: 150px;
-    animation-delay: 7s;
-}
-
-.circles li:nth-child(8){
-    left: 50%;
-    width: 25px;
-    height: 25px;
-    animation-delay: 15s;
-    animation-duration: 45s;
-}
-
-.circles li:nth-child(9){
-    left: 20%;
-    width: 15px;
-    height: 15px;
-    animation-delay: 2s;
-    animation-duration: 35s;
-}
-
-.circles li:nth-child(10){
-    left: 85%;
-    width: 150px;
-    height: 150px;
-    animation-delay: 0s;
-    animation-duration: 11s;
-}
-
-
-/* Flexbox for arranging charts side by side */
+/* Charts section styling */
 .charts-section {
     display: flex;
-    justify-content: space-around;
-    padding: 20px;
-    gap: 20px;
-    background-color: #f9f9f9;
+    justify-content: space-between;
+    margin-bottom: 20px;
 }
 
-/* Styling each chart container */
 .chart-container {
-    width: 30%;  /* Adjust width for 3 charts side by side */
-    background-color: #ffffff;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    border-radius: 10px;
-    text-align: center;
-    padding: 20px;
-    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+    width: 30%;
 }
 
-/* Hover effect on each chart container */
-.chart-container:hover {
-    transform: translateY(-10px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-}
-
-/* Styling the images within the containers */
 .chart-container img {
-    width: 100%;
+    max-width: 100%;
     height: auto;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Improved choice summary */
+.question-summary {
+    margin-top: 20px;
+}
+
+.question-card {
+    background-color: #fafafa;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.choice-list {
+    margin-top: 10px;
+}
+
+.choice-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background-color: #fff;
+    margin: 5px 0;
     border-radius: 5px;
-    max-height: 300px;  /* Limit the height */
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 }
 
-/* Title for each chart */
-.chart-container h2 {
-    font-size: 1.2rem;
-    margin-bottom: 10px;
-    color: #333;
+.choice-text {
+    font-weight: 600;
 }
 
-/* Responsive design */
-@media (max-width: 768px) {
-    .chart-container {
-        width: 100%;  /* Make charts stack vertically on smaller screens */
-        margin-bottom: 20px;
-    }
+.choice-count {
+    font-weight: 700;
+    color: #007bff;
 }
 
+/* Button styling */
+.button {
+    display: inline-block;
+    padding: 10px 20px;
+    font-size: 16px;
+    font-weight: bold;
+    color: white;
+    background-color: #007bff;
+    border-radius: 5px;
+    text-decoration: none;
+    transition: background-color 0.3s ease;
+}
 
-@keyframes animate {
-
-    0%{
-        transform: translateY(0) rotate(0deg);
-        opacity: 1;
-        border-radius: 0;
-    }
-
-    100%{
-        transform: translateY(-1000px) rotate(720deg);
-        opacity: 0;
-        border-radius: 50%;
-    }
-
+.button:hover {
+    background-color: #0056b3;
 }

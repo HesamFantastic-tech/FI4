@@ -5,50 +5,90 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>خلاصه پاسخ‌ها</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles2.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h2>خلاصه پاسخ‌ها</h2>
-        {% for question_num, counts in choice_counts.items() %}
-            <h3>سوال {{ question_num }}</h3>
-            <ul>
-                {% for choice, count in counts.items() %}
-                    <li>{{ choice }}: {{ count }} بار انتخاب شده است</li>
-                {% endfor %}
-            </ul>
-        {% endfor %}
-        
-        <div class="charts-section">
-            <div class="chart-container">
+    <div class="main-container">
+        <div class="left-panel">
+            <div class="chart-preview" id="chart1">
                 <h2>نمودار دایره‌ای</h2>
-                <img src="{{ url_for('static', filename='pie_chart.png') }}" alt="Pie Chart">
+                <canvas id="pieChart"></canvas>
             </div>
-            <div class="chart-container">
+            <div class="chart-preview" id="chart2">
                 <h2>نمودار ستونی</h2>
-                <img src="{{ url_for('static', filename='bar_chart.png') }}" alt="Bar Chart">
+                <canvas id="barChart"></canvas>
             </div>
-            <div class="chart-container">
+            <div class="chart-preview" id="chart3">
                 <h2>نمودار خطی</h2>
-                <img src="{{ url_for('static', filename='line_chart.png') }}" alt="Line Chart">
+                <canvas id="lineChart"></canvas>
             </div>
         </div>
 
-        <div class="choice-counts">
-            <h2>تعداد انتخاب‌ها برای هر سوال</h2>
-            <ul>
-                {% for question, counts in choice_counts.items() %}
-                <li>سوال {{ question }}: 
-                    <ul>
-                        {% for choice, count in counts.items() %}
-                        <li>{{ choice }}: {{ count }}</li>
-                        {% endfor %}
-                    </ul>
-                </li>
-                {% endfor %}
-            </ul>
+        <div class="right-panel">
+            <div class="summary-section">
+                <h2>خلاصه پاسخ‌ها</h2>
+                <div id="question-summary">
+                    <!-- Loop through questions and display answers dynamically -->
+                    {% for question in summary_data %}
+                    <div class="question-card">
+                        <h3>{{ question.question }}</h3>
+                        <ul class="choice-list">
+                            {% for choice, count in question.choices.items() %}
+                            <li class="choice-item">
+                                <span class="choice-text">{{ choice }}</span>
+                                <span class="choice-count">{{ count }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
         </div>
-        
-        <a href="{{ url_for('index') }}" class="button">بازگشت به صفحه اصلی</a>
     </div>
+
+    <script>
+        // Define charts using Chart.js
+
+        // Pie Chart Example
+        var ctxPie = document.getElementById('pieChart').getContext('2d');
+        var pieChart = new Chart(ctxPie, {
+            type: 'pie',
+            data: {
+                labels: {{ summary_data[0].choices.keys() | list | tojson }},
+                datasets: [{
+                    data: {{ summary_data[0].choices.values() | list | tojson }},
+                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#FF9F40', '#9966FF'],
+                }]
+            }
+        });
+
+        // Bar Chart Example
+        var ctxBar = document.getElementById('barChart').getContext('2d');
+        var barChart = new Chart(ctxBar, {
+            type: 'bar',
+            data: {
+                labels: {{ summary_data[1].choices.keys() | list | tojson }},
+                datasets: [{
+                    data: {{ summary_data[1].choices.values() | list | tojson }},
+                    backgroundColor: '#36A2EB'
+                }]
+            }
+        });
+
+        // Line Chart Example
+        var ctxLine = document.getElementById('lineChart').getContext('2d');
+        var lineChart = new Chart(ctxLine, {
+            type: 'line',
+            data: {
+                labels: {{ summary_data[2].choices.keys() | list | tojson }},
+                datasets: [{
+                    data: {{ summary_data[2].choices.values() | list | tojson }},
+                    borderColor: '#FF6384',
+                    fill: false
+                }]
+            }
+        });
+    </script>
 </body>
 </html>

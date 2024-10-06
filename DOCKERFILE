@@ -1,21 +1,7 @@
-# Use an official Python runtime as a parent image
 FROM python:3.10.12
-
-# Set the working directory in the container
 WORKDIR /FI4
-
-# Copy the current directory contents into the container at /app
-COPY . /FI4
-
-# Install any dependencies in the requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Expose the port the app runs on
-EXPOSE 5000
-
-# Define environment variables
-ENV FLASK_APP=main.py
-ENV FLASK_RUN_HOST=0.0.0.0
-
-# Run the application
-CMD ["flask", "run"]
+COPY . /FI4/
+RUN pip install -r requirements.txt
+ENV FLASK_PORT=5025
+ENV FLASK_DEBUG=true
+CMD ["python", "main.py"]

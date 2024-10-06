@@ -4,9 +4,16 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from flask import Flask, render_template, request, session, redirect, url_for
 from collections import Counter
+import numpy as np
+
 
 app = Flask(__name__)
 app.secret_key = 'camera20'
+
+# Fetch port and debug mode from environment variables
+port = int(os.environ.get('FLASK_PORT', 2120))  # Default to 5025 if not set
+debug_mode = os.environ.get('FLASK_DEBUG', 'true').lower() == 'true'
+
 
 # List of questions
 questions_list = [
@@ -156,46 +163,231 @@ def questions(question_number):
 
     return render_template('questions.html', question=current_question, question_number=question_number, choices=choices)
 
+def generate_charts(summary_data):
+    labels = [item['question'] for item in summary_data]
+    sizes = [sum(item['choices'].values()) for item in summary_data]
 
-@app.route("/summary")
-def summary():
-    # Retrieve user info from session
-    user_info = session.get('user_info', {})
-    answers = {f'سوال {i}': session.get(f'answer_{i}', '') for i in range(1, len(questions_list) + 1)}
-
-    # Count responses
-    choice_counts = {i: Counter() for i in range(1, len(questions_list) + 1)}
-    
-    for i in range(1, len(questions_list) + 1):
-        answer = session.get(f'answer_{i}')
-        if answer:
-            choice_counts[i][answer] += 1
-
-    # Prepare data for charts
-    # For example, let's create a pie chart based on the counts for the first question
-    create_charts(choice_counts)
-
-    # Combine user info and answers for display
-    data = {**user_info, **answers}
-
-    return render_template("summary_with_charts.html", data=data, choice_counts=choice_counts)
-
-def create_charts(choice_counts):
-    # Example: Create a pie chart for the first question
-    labels = list(choice_counts[1].keys())  # Choices for question 1
-    sizes = list(choice_counts[1].values())  # Counts for each choice
-    
-    # Create a pie chart
+    # Pie Chart
     plt.figure(figsize=(6, 6))
-    plt.pie(sizes, labels=labels, autopct='%1.1f%%')
-    plt.title('نمودار دایره‌ای برای سوال 1')
-    plt.savefig(os.path.join('static', 'pie_chart.png'))
+    plt.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=140)
+    plt.axis('equal')
+    plt.savefig('static/pie_chart.png')
     plt.close()
-    
-    # You can create similar charts for other questions as needed
 
+    # Bar Chart
+    plt.figure(figsize=(8, 6))
+    plt.bar(labels, sizes, color='skyblue')
+    plt.xlabel('Questions')
+    plt.ylabel('Counts')
+    plt.xticks(rotation=90)
+    plt.tight_layout()
+    plt.savefig('static/bar_chart.png')
+    plt.close()
 
+    # Line Chart
+    x = np.arange(len(summary_data))
+    plt.figure(figsize=(8, 6))
+    plt.plot(x, sizes, marker='o', color='green')
+    plt.xlabel('Questions')
+    plt.ylabel('Counts')
+    plt.savefig('static/line_chart.png')
+    plt.close()
 
+# Example route to display summary page
+@app.route('/summary')
+def summary():
+    # Simulated data (replace with actual data from your application)
+    summary_data = [
+        {
+            'question': 'سوال ۱',
+            'choices': {
+                'گزینه ۱': 10,
+                'گزینه ۲': 20,
+                'گزینه ۳': 30,
+                'گزینه ۴': 5,
+                'گزینه ۵': 15,
+                'گزینه ۶': 8
+            }
+        },
+        {
+            'question': 'سوال ۲',
+            'choices': {
+                'گزینه ۱': 15,
+                'گزینه ۲': 25,
+                'گزینه ۳': 10,
+                'گزینه ۴': 20,
+                'گزینه ۵': 5,
+                'گزینه ۶': 12
+            }
+        },
+        {
+            'question': 'سوال ۳',
+            'choices': {
+                'گزینه ۱': 22,
+                'گزینه ۲': 18,
+                'گزینه ۳': 25,
+                'گزینه ۴': 7,
+                'گزینه ۵': 14,
+                'گزینه ۶': 9
+            }
+        },
+        {
+            'question': 'سوال ۴',
+            'choices': {
+                'گزینه ۱': 30,
+                'گزینه ۲': 12,
+                'گزینه ۳': 15,
+                'گزینه ۴': 8,
+                'گزینه ۵': 6,
+                'گزینه ۶': 11
+            }
+        },
+        {
+            'question': 'سوال ۵',
+            'choices': {
+                'گزینه ۱': 11,
+                'گزینه ۲': 21,
+                'گزینه ۳': 19,
+                'گزینه ۴': 10,
+                'گزینه ۵': 13,
+                'گزینه ۶': 5
+            }
+        },
+        {
+            'question': 'سوال ۶',
+            'choices': {
+                'گزینه ۱': 9,
+                'گزینه ۲': 16,
+                'گزینه ۳': 22,
+                'گزینه ۴': 14,
+                'گزینه ۵': 7,
+                'گزینه ۶': 3
+            }
+        },
+        {
+            'question': 'سوال ۷',
+            'choices': {
+                'گزینه ۱': 17,
+                'گزینه ۲': 25,
+                'گزینه ۳': 5,
+                'گزینه ۴': 11,
+                'گزینه ۵': 8,
+                'گزینه ۶': 2
+            }
+        },
+        {
+            'question': 'سوال ۸',
+            'choices': {
+                'گزینه ۱': 20,
+                'گزینه ۲': 10,
+                'گزینه ۳': 15,
+                'گزینه ۴': 12,
+                'گزینه ۵': 4,
+                'گزینه ۶': 18
+            }
+        },
+        {
+            'question': 'سوال ۹',
+            'choices': {
+                'گزینه ۱': 14,
+                'گزینه ۲': 22,
+                'گزینه ۳': 9,
+                'گزینه ۴': 18,
+                'گزینه ۵': 16,
+                'گزینه ۶': 3
+            }
+        },
+        {
+            'question': 'سوال ۱۰',
+            'choices': {
+                'گزینه ۱': 12,
+                'گزینه ۲': 20,
+                'گزینه ۳': 6,
+                'گزینه ۴': 14,
+                'گزینه ۵': 22,
+                'گزینه ۶': 8
+            }
+        },
+        {
+            'question': 'سوال ۱۱',
+            'choices': {
+                'گزینه ۱': 11,
+                'گزینه ۲': 17,
+                'گزینه ۳': 20,
+                'گزینه ۴': 10,
+                'گزینه ۵': 15,
+                'گزینه ۶': 13
+            }
+        },
+        {
+            'question': 'سوال ۱۲',
+            'choices': {
+                'گزینه ۱': 24,
+                'گزینه ۲': 8,
+                'گزینه ۳': 15,
+                'گزینه ۴': 6,
+                'گزینه ۵': 10,
+                'گزینه ۶': 5
+            }
+        },
+        {
+            'question': 'سوال ۱۳',
+            'choices': {
+                'گزینه ۱': 18,
+                'گزینه ۲': 16,
+                'گزینه ۳': 14,
+                'گزینه ۴': 12,
+                'گزینه ۵': 20,
+                'گزینه ۶': 10
+            }
+        },
+        {
+            'question': 'سوال ۱۴',
+            'choices': {
+                'گزینه ۱': 21,
+                'گزینه ۲': 11,
+                'گزینه ۳': 9,
+                'گزینه ۴': 5,
+                'گزینه ۵': 12,
+                'گزینه ۶': 7
+            }
+        },
+        {
+            'question': 'سوال ۱۵',
+            'choices': {
+                'گزینه ۱': 10,
+                'گزینه ۲': 12,
+                'گزینه ۳': 19,
+                'گزینه ۴': 15,
+                'گزینه ۵': 20,
+                'گزینه ۶': 11
+            }
+        },
+        {
+            'question': 'سوال ۱۶',
+            'choices': {
+                'گزینه ۱': 18,
+                'گزینه ۲': 20,
+                'گزینه ۳': 15,
+                'گزینه ۴': 22,
+                'گزینه ۵': 7,
+                'گزینه ۶': 9
+            }
+        }
+    ]
+    # Collect answers from session and count occurrences
+    for i in range(1, len(questions_list) + 1):
+        question_answers = session.get(f'answer_{i}', None)
+        if question_answers:
+            # Count choices (you need to define how to count choices)
+            choice_counts = Counter(question_answers)
+            summary_data.append({
+                'question': questions_list[i - 1],
+                'choices': dict(choice_counts)
+            })
+
+    generate_charts(summary_data)  # Generate charts based on actual answers
+    return render_template('summary_with_charts.html', summary_data=summary_data)
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5025)
+    app.run(debug=debug_mode, port=port)

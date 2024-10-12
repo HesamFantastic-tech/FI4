@@ -3,90 +3,136 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>خلاصه پاسخ‌ها</title>
+    <title>خلاصه ی پاسخ‌ها</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles2.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Industrial theme styles moved to styles2.css */
+        /* Ensure that the following styles are in styles2.css */
+    </style>
 </head>
 <body>
     <div class="main-container">
+        <!-- Left panel for charts -->
         <div class="left-panel">
-            <div class="chart-preview" id="chart1">
-                <h2>نمودار دایره‌ای</h2>
-                <canvas id="pieChart"></canvas>
-            </div>
-            <div class="chart-preview" id="chart2">
-                <h2>نمودار ستونی</h2>
-                <canvas id="barChart"></canvas>
-            </div>
-            <div class="chart-preview" id="chart3">
-                <h2>نمودار خطی</h2>
-                <canvas id="lineChart"></canvas>
-            </div>
+            <div id="charts-loading">در حال بارگذاری نمودارها...</div>
+            <!-- Charts will be inserted dynamically -->
         </div>
 
+        <!-- Right panel for summary -->
         <div class="right-panel">
-            <div class="summary-section">
-                <h2>خلاصه پاسخ‌ها</h2>
-                <div id="question-summary">
-                    <!-- Loop through questions and display answers dynamically -->
-                    {% for question in summary_data %}
+            <h2>خلاصه ی پاسخ‌ها</h2>
+            <div id="question-summary">
+                {% for item in summary_data %}
                     <div class="question-card">
-                        <h3>{{ question.question }}</h3>
+                        <h3>{{ item.question }}</h3>
                         <ul class="choice-list">
-                            {% for choice, count in question.choices.items() %}
-                            <li class="choice-item">
-                                <span class="choice-text">{{ choice }}</span>
-                                <span class="choice-count">{{ count }}</span>
-                            </li>
+                            {% for choice in item.choices %}
+                                <li class="choice-item">
+                                    <span class="choice-text">{{ choice.choice }}</span>
+                                    <span class="choice-count">{{ choice.count }}</span>
+                                </li>
                             {% endfor %}
                         </ul>
                     </div>
-                    {% endfor %}
-                </div>
+                {% endfor %}
             </div>
         </div>
     </div>
 
     <script>
-        // Define charts using Chart.js
+        // Wait for the DOM to load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Fetch the data from Flask
+            fetch('/get_chart_data')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('charts-loading').style.display = 'none';
+                    const groupedData = groupByQuestion(data);
 
-        // Pie Chart Example
-        var ctxPie = document.getElementById('pieChart').getContext('2d');
-        var pieChart = new Chart(ctxPie, {
-            type: 'pie',
-            data: {
-                labels: {{ summary_data[0].choices.keys() | list | tojson }},
-                datasets: [{
-                    data: {{ summary_data[0].choices.values() | list | tojson }},
-                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#FF9F40', '#9966FF'],
-                }]
+                    groupedData.forEach((questionData, index) => {
+                        const chartId = `chartCanvas${index}`;
+                        const chartType = getChartType(index);
+                        const labels = Object.keys(questionData.choices);
+                        const values = Object.values(questionData.choices);
+
+                        // Add a canvas for each chart
+                        document.querySelector('.left-panel').innerHTML += `
+                            <div class="chart-preview">
+                                <h2>سوال ${index + 1}</h2>
+                                <canvas id="${chartId}" width="400" height="400"></canvas>
+                            </div>
+                        `;
+
+                        // Create the chart
+                        createChart(chartType, values, labels, chartId);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching chart data:', error);
+                    document.getElementById('charts-loading').innerText = 'بارگذاری نمودارها با مشکل مواجه شد.';
+                });
+
+            // Helper function to group data by question
+            function groupByQuestion(data) {
+                const groupedData = {};
+                data.forEach(item => {
+                    if (!groupedData[item.question_id]) {
+                        groupedData[item.question_id] = { choices: {} };
+                    }
+                    groupedData[item.question_id].choices[item.choice] = item.count;
+                });
+                return Object.values(groupedData);
             }
-        });
 
-        // Bar Chart Example
-        var ctxBar = document.getElementById('barChart').getContext('2d');
-        var barChart = new Chart(ctxBar, {
-            type: 'bar',
-            data: {
-                labels: {{ summary_data[1].choices.keys() | list | tojson }},
-                datasets: [{
-                    data: {{ summary_data[1].choices.values() | list | tojson }},
-                    backgroundColor: '#36A2EB'
-                }]
+            // Helper function to determine the chart type
+            function getChartType(index) {
+                return index % 3 === 0 ? 'pie' : index % 3 === 1 ? 'bar' : 'line';
             }
-        });
 
-        // Line Chart Example
-        var ctxLine = document.getElementById('lineChart').getContext('2d');
-        var lineChart = new Chart(ctxLine, {
-            type: 'line',
-            data: {
-                labels: {{ summary_data[2].choices.keys() | list | tojson }},
-                datasets: [{
-                    data: {{ summary_data[2].choices.values() | list | tojson }},
-                    borderColor: '#FF6384',
-                    fill: false
-                }]
+            // Function to create charts
+            function createChart(chartType, data, labels, chartId) {
+                const ctx = document.getElementById(chartId).getContext('2d');
+                const chartColors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
+
+                new Chart(ctx, {
+                    type: chartType,
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: chartColors.slice(0, labels.length),
+                        }]
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    color: '#EAEAEA'
+                                }
+                            },
+                            title: {
+                                display: false,
+                            }
+                        },
+                        scales: chartType !== 'pie' ? {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    color: '#EAEAEA'
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    color: '#EAEAEA'
+                                }
+                            }
+                        } : {}
+                    }
+                });
             }
         });
     </script>

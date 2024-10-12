@@ -1,14 +1,54 @@
 import os
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
-from flask import Flask, render_template, request, session, redirect, url_for
+from flask import Flask, jsonify, render_template, request, session, redirect, url_for, flash
 from collections import Counter
 import numpy as np
+import logging
+import pymysql
+from collections import defaultdict
+import bcrypt
+from datetime import timedelta
+from werkzeug.security import generate_password_hash
+from werkzeug.security import check_password_hash
+
+
+def get_db_connection():
+    try:
+        connection = pymysql.connect(
+            host=os.environ.get('DB_HOST', 'localhost'),
+            user=os.environ.get('DB_USER', 'default_user'),
+            password=os.environ.get('DB_PASSWORD', ''),
+            db=os.environ.get('DB_NAME', 'FI4'),
+            cursorclass=pymysql.cursors.DictCursor)
+        return connection
+    except pymysql.MySQLError as e:
+        logging.error(f"Database connection failed: {e}")
+        return None
+
+
 
 
 app = Flask(__name__)
-app.secret_key = 'camera20'
+app.secret_key = os.urandom(24)
+
+app.config.update(
+    SESSION_COOKIE_SECURE=True,   # Only transmit cookies over HTTPS
+    SESSION_COOKIE_HTTPONLY=True,  # JavaScript can't access the cookie
+    SESSION_COOKIE_SAMESITE='Lax'  # Prevents CSRF by restricting cross-site access
+)
+
+
+
+@app.before_request
+def make_session_permanent():
+    session.permanent = True
+
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)  # Set session timeout to 30 minutes
+
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 # Fetch port and debug mode from environment variables
 port = int(os.environ.get('FLASK_PORT', 2120))  # Default to 5025 if not set
@@ -133,261 +173,332 @@ choices_dict = {
         "مدیریت تغییرات"]
 }
 
+@app.route('/logout')
+def logout():
+    session.clear()  # Clear the entire session
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('index'))
+
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
+        # Gather user information from the form
+        first_name = request.form.get("first_name")
+        last_name = request.form.get("last_name")
+        phone_number = request.form.get("phone_number")
+        gmail_address = request.form.get("gmail_address")
+        post = request.form.get("Post")
+        
+        # Save the user data into the 'users' table
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            sql = "INSERT INTO users (first_name, last_name, phone_number, gmail_address, post) VALUES (%s, %s, %s, %s, %s)"
+            cursor.execute(sql, (first_name, last_name, phone_number, gmail_address, post))
+            user_id = cursor.lastrowid  # Get the ID of the inserted user
+        connection.commit()
+        connection.close()
+
+        # Store user info and user_id in session
         session['user_info'] = {
-            'نام': request.form.get("first_name"),
-            'نام خانوادگی': request.form.get("last_name"),
-            'شماره تلفن': request.form.get("phone_number"),
-            'آدرس جیمیل': request.form.get("gmail_address"),
-            'سمت': request.form.get("Post")
+            'first_name': first_name,
+            'last_name': last_name,
+            'phone_number': phone_number,
+            'gmail_address': gmail_address,
+            'post': post,
+            'user_id': user_id  # Store user_id for later use
         }
+
         return redirect(url_for('questions', question_number=1))  # Start from first question
     return render_template("index.html")
 
 
+def hash_password(password):
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+
+# Example usage when creating a new user:
+hashed_password = hash_password('plain_text_password')
+
+
+def get_user_by_credentials(username, password):
+    connection = get_db_connection()
+    with connection.cursor() as cursor:
+        # Query to find the user by username
+        cursor.execute("""
+            SELECT id, username, password 
+            FROM users 
+            WHERE username = %s
+        """, (username,))
+        
+        user = cursor.fetchone()
+    
+    connection.close()
+    
+    # If user exists and the password matches, return the user
+    if user and check_password(user['password'], password):
+        return user
+    return None
+
+def check_password(stored_password, provided_password):
+    # stored_password is hashed, provided_password is plain text
+    return bcrypt.checkpw(provided_password.encode('utf-8'), stored_password.encode('utf-8'))
+
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        email = request.form.get('email')
+
+        # Check if any field is missing
+        if not username or not password or not email:
+            flash("All fields are required.", "error")
+            return redirect(url_for('register'))
+
+        # Password validation: minimum 8 characters
+        if len(password) < 8:
+            flash("Password must be at least 8 characters long.", "error")
+            return redirect(url_for('register'))
+
+        # Check complexity (at least one letter, one number, and one special character)
+        if not re.match(r'^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$', password):
+            flash("Password must contain at least one letter, one number, and one special character.", "error")
+            return redirect(url_for('register'))
+
+        # Hash the password before storing
+        hashed_password = generate_password_hash(password)
+
+        # Get database connection
+        connection = get_db_connection()
+        if not connection:
+            flash("Database connection failed.", "error")
+            return redirect(url_for('register'))
+
+        try:
+            with connection.cursor() as cursor:
+                # Check if the username or email already exists
+                cursor.execute("SELECT * FROM users WHERE username = %s OR email = %s", (username, email))
+                existing_user = cursor.fetchone()
+
+                if existing_user:
+                    flash("Username or email already in use.", "error")
+                    return redirect(url_for('register'))
+
+                # Insert the new user into the users table
+                cursor.execute(
+                    "INSERT INTO users (username, password, email) VALUES (%s, %s, %s)",
+                    (username, hashed_password, email)
+                )
+                connection.commit()
+
+            flash("Registration successful! Please log in.", "success")
+            return redirect(url_for('login'))
+
+        except Exception as e:
+            flash(f"An error occurred: {e}", "error")
+            return redirect(url_for('register'))
+
+        finally:
+            connection.close()
+
+    # If GET request, render the registration form
+    return render_template('register.html')
+
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        # Check if username or password is missing
+        if not username or not password:
+            flash("Username and password are required.", "error")
+            return redirect(url_for('login'))
+
+        # Get the database connection
+        connection = get_db_connection()
+        if not connection:
+            flash("Database connection failed.", "error")
+            return redirect(url_for('login'))
+
+        try:
+            with connection.cursor() as cursor:
+                # Retrieve the user from the database
+                cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+                user = cursor.fetchone()
+                
+                # Check if user exists and password matches
+                if user and check_password_hash(user['password'], password):
+                    session['user_info'] = {
+                        'user_id': user['id'],
+                        'username': user['username']
+                    }
+                    flash("Login successful!", "success")
+                    return redirect(url_for('questions', question_number=0))
+                else:
+                    flash("Invalid username or password.", "error")
+                    return redirect(url_for('login'))
+        
+        except Exception as e:
+            flash(f"An error occurred: {e}", "error")
+            return redirect(url_for('login'))
+
+        finally:
+            # Close the connection after the operation
+            connection.close()
+
+    # If GET request, render the login page
+    return render_template('login.html')
+
+
+
 @app.route('/questions/<int:question_number>', methods=['GET', 'POST'])
 def questions(question_number):
+    # Check if user_info exists in the session
+    if 'user_info' not in session:
+        flash("You must be logged in to access this page", "warning")
+        return redirect(url_for('login'))  # Redirect to login if not logged in
+
+    user_id = session['user_info']['user_id']
+
+    # Validate question_number
+    if question_number >= len(questions_list):
+        flash("This question does not exist.", "error")
+        return redirect(url_for('questions', question_number=0))
+
+    question = questions_list[question_number]
+    choices = choices_dict.get(question_number, ["No choices available for this question"])
+
+    # Handle form submission
     if request.method == 'POST':
-        answer = request.form.get("answer")
-        if answer:
-            session[f'answer_{question_number}'] = answer
-        if question_number < len(questions_list):
+        choice = request.form['choice']
+        save_response(user_id, question_number, choice)
+        flash("Your response has been saved!", "success")
+
+        # Redirect to next question or summary
+        if question_number + 1 < len(questions_list):
             return redirect(url_for('questions', question_number=question_number + 1))
         else:
-            return redirect(url_for('summary'))  # Go to summary after the last question
+            return redirect(url_for('summary'))  # Redirect to summary after the last question
 
-    current_question = questions_list[question_number - 1]
-    choices = choices_dict[question_number]
+    # Render the question page
+    return render_template('question_page.html', question=question, choices=choices)
 
-    return render_template('questions.html', question=current_question, question_number=question_number, choices=choices)
 
-def generate_charts(summary_data):
-    labels = [item['question'] for item in summary_data]
-    sizes = [sum(item['choices'].values()) for item in summary_data]
+# Helper function to save responses (you can adjust this according to your needs)
+def save_response(user_id, question_number, choice):
+    connection = get_db_connection()
+    if not connection:
+        logging.error("Database connection failed.")
+        return
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            INSERT INTO responses (user_id, question_number, choice)
+            VALUES (%s, %s, %s)
+        """, (user_id, question_number, choice))
+    connection.commit()
+    connection.close()
 
-    # Pie Chart
-    plt.figure(figsize=(6, 6))
-    plt.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=140)
-    plt.axis('equal')
-    plt.savefig('static/pie_chart.png')
-    plt.close()
+def calculate_average(session):
+    total_value = 0
+    num_valid_answers = 0
+    num_questions = len(questions_list)
+    
+    for i in range(1, num_questions + 1):
+        answer = session.get(f'answer_{i}')
+        if answer and answer.isdigit():
+            total_value += int(answer)
+            num_valid_answers += 1
 
-    # Bar Chart
-    plt.figure(figsize=(8, 6))
-    plt.bar(labels, sizes, color='skyblue')
-    plt.xlabel('Questions')
-    plt.ylabel('Counts')
-    plt.xticks(rotation=90)
-    plt.tight_layout()
-    plt.savefig('static/bar_chart.png')
-    plt.close()
+    return total_value / num_valid_answers if num_valid_answers else 0
 
-    # Line Chart
-    x = np.arange(len(summary_data))
-    plt.figure(figsize=(8, 6))
-    plt.plot(x, sizes, marker='o', color='green')
-    plt.xlabel('Questions')
-    plt.ylabel('Counts')
-    plt.savefig('static/line_chart.png')
-    plt.close()
 
-# Example route to display summary page
+
+@app.route('/submit_response', methods=['POST'])
+def submit_response():
+    data = request.json  # Assuming data is being sent as JSON
+    user_id = data['user_id']
+    question_number = data['question_number']
+    choice = data['choice']
+
+    connection = get_db_connection()
+    with connection.cursor() as cursor:
+        sql = "INSERT INTO responses (user_id, question_number, choice) VALUES (%s, %s, %s)"
+        cursor.execute(sql, (user_id, question_number, choice))
+    connection.commit()
+    connection.close()
+
+    return jsonify({"message": "Response submitted successfully"}), 201
+
+
+@app.route('/get_chart_data')
+def get_chart_data():
+    if 'user_info' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    user_id = session['user_info']['user_id']
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT question_id, choice, COUNT(*) as count
+            FROM responses
+            WHERE user_id = %s
+            GROUP BY question_id, choice
+        """, (user_id,))
+        raw_data = cursor.fetchall()
+    
+    connection.close()
+
+    # Organize data in a dictionary grouped by question_id
+    chart_data = defaultdict(lambda: {"choices": {}})
+    
+    for row in raw_data:
+        question_id = row["question_id"]
+        choice = row["choice"]
+        count = row["count"]
+        chart_data[question_id]["choices"][choice] = count
+    
+    # Convert the defaultdict back to a regular dict for JSON serialization
+    chart_data = dict(chart_data)
+    
+    return jsonify(chart_data)
+
+
 @app.route('/summary')
 def summary():
-    # Simulated data (replace with actual data from your application)
-    summary_data = [
-        {
-            'question': 'سوال ۱',
-            'choices': {
-                'گزینه ۱': 10,
-                'گزینه ۲': 20,
-                'گزینه ۳': 30,
-                'گزینه ۴': 5,
-                'گزینه ۵': 15,
-                'گزینه ۶': 8
-            }
-        },
-        {
-            'question': 'سوال ۲',
-            'choices': {
-                'گزینه ۱': 15,
-                'گزینه ۲': 25,
-                'گزینه ۳': 10,
-                'گزینه ۴': 20,
-                'گزینه ۵': 5,
-                'گزینه ۶': 12
-            }
-        },
-        {
-            'question': 'سوال ۳',
-            'choices': {
-                'گزینه ۱': 22,
-                'گزینه ۲': 18,
-                'گزینه ۳': 25,
-                'گزینه ۴': 7,
-                'گزینه ۵': 14,
-                'گزینه ۶': 9
-            }
-        },
-        {
-            'question': 'سوال ۴',
-            'choices': {
-                'گزینه ۱': 30,
-                'گزینه ۲': 12,
-                'گزینه ۳': 15,
-                'گزینه ۴': 8,
-                'گزینه ۵': 6,
-                'گزینه ۶': 11
-            }
-        },
-        {
-            'question': 'سوال ۵',
-            'choices': {
-                'گزینه ۱': 11,
-                'گزینه ۲': 21,
-                'گزینه ۳': 19,
-                'گزینه ۴': 10,
-                'گزینه ۵': 13,
-                'گزینه ۶': 5
-            }
-        },
-        {
-            'question': 'سوال ۶',
-            'choices': {
-                'گزینه ۱': 9,
-                'گزینه ۲': 16,
-                'گزینه ۳': 22,
-                'گزینه ۴': 14,
-                'گزینه ۵': 7,
-                'گزینه ۶': 3
-            }
-        },
-        {
-            'question': 'سوال ۷',
-            'choices': {
-                'گزینه ۱': 17,
-                'گزینه ۲': 25,
-                'گزینه ۳': 5,
-                'گزینه ۴': 11,
-                'گزینه ۵': 8,
-                'گزینه ۶': 2
-            }
-        },
-        {
-            'question': 'سوال ۸',
-            'choices': {
-                'گزینه ۱': 20,
-                'گزینه ۲': 10,
-                'گزینه ۳': 15,
-                'گزینه ۴': 12,
-                'گزینه ۵': 4,
-                'گزینه ۶': 18
-            }
-        },
-        {
-            'question': 'سوال ۹',
-            'choices': {
-                'گزینه ۱': 14,
-                'گزینه ۲': 22,
-                'گزینه ۳': 9,
-                'گزینه ۴': 18,
-                'گزینه ۵': 16,
-                'گزینه ۶': 3
-            }
-        },
-        {
-            'question': 'سوال ۱۰',
-            'choices': {
-                'گزینه ۱': 12,
-                'گزینه ۲': 20,
-                'گزینه ۳': 6,
-                'گزینه ۴': 14,
-                'گزینه ۵': 22,
-                'گزینه ۶': 8
-            }
-        },
-        {
-            'question': 'سوال ۱۱',
-            'choices': {
-                'گزینه ۱': 11,
-                'گزینه ۲': 17,
-                'گزینه ۳': 20,
-                'گزینه ۴': 10,
-                'گزینه ۵': 15,
-                'گزینه ۶': 13
-            }
-        },
-        {
-            'question': 'سوال ۱۲',
-            'choices': {
-                'گزینه ۱': 24,
-                'گزینه ۲': 8,
-                'گزینه ۳': 15,
-                'گزینه ۴': 6,
-                'گزینه ۵': 10,
-                'گزینه ۶': 5
-            }
-        },
-        {
-            'question': 'سوال ۱۳',
-            'choices': {
-                'گزینه ۱': 18,
-                'گزینه ۲': 16,
-                'گزینه ۳': 14,
-                'گزینه ۴': 12,
-                'گزینه ۵': 20,
-                'گزینه ۶': 10
-            }
-        },
-        {
-            'question': 'سوال ۱۴',
-            'choices': {
-                'گزینه ۱': 21,
-                'گزینه ۲': 11,
-                'گزینه ۳': 9,
-                'گزینه ۴': 5,
-                'گزینه ۵': 12,
-                'گزینه ۶': 7
-            }
-        },
-        {
-            'question': 'سوال ۱۵',
-            'choices': {
-                'گزینه ۱': 10,
-                'گزینه ۲': 12,
-                'گزینه ۳': 19,
-                'گزینه ۴': 15,
-                'گزینه ۵': 20,
-                'گزینه ۶': 11
-            }
-        },
-        {
-            'question': 'سوال ۱۶',
-            'choices': {
-                'گزینه ۱': 18,
-                'گزینه ۲': 20,
-                'گزینه ۳': 15,
-                'گزینه ۴': 22,
-                'گزینه ۵': 7,
-                'گزینه ۶': 9
-            }
-        }
-    ]
-    # Collect answers from session and count occurrences
-    for i in range(1, len(questions_list) + 1):
-        question_answers = session.get(f'answer_{i}', None)
-        if question_answers:
-            # Count choices (you need to define how to count choices)
-            choice_counts = Counter(question_answers)
-            summary_data.append({
-                'question': questions_list[i - 1],
-                'choices': dict(choice_counts)
-            })
+    user_id = session['user_info']['user_id']
+    
+    # Fetch the user's responses and summary data
+    connection = get_db_connection()
+    with connection.cursor() as cursor:
+        # Get user info
+        cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+        user_info = cursor.fetchone()
 
-    generate_charts(summary_data)  # Generate charts based on actual answers
-    return render_template('summary_with_charts.html', summary_data=summary_data)
+        # Get user responses
+        cursor.execute("SELECT r.question_number, r.choice, q.question_text FROM responses r JOIN questions q ON r.question_number = q.id WHERE r.user_id = %s", (user_id,))
+        user_responses = cursor.fetchall()
+
+    connection.close()
+
+    # Prepare data for chart generation
+    summary_data = []
+    for response in user_responses:
+        summary_data.append({
+            'question': response['question_text'],
+            'answer': response['choice']
+        })
+
+    return render_template('summary_with_charts.html', 
+                           summary_data=summary_data, 
+                           user_info=user_info)
+
 
 if __name__ == "__main__":
-    app.run(debug=debug_mode, port=port)
+    app.run(debug=debug_mode, port=1119)

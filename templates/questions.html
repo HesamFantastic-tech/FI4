@@ -12,7 +12,7 @@
             <!-- <h1>سوال {{ question_number }} از {{ questions_list|length }}</h1> -->
             <h1>سوال {{ question_number }} از {{ 16 }}</h1>
         </div>
-        <form method="POST" action="{{ url_for('questions', question_number=question_number) }}">
+        <form method="POST" action="{{ url_for('questions', question_id=0) }}">
             <p>{{ question }}</p>
             
             {% for choice in choices %}

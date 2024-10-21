@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سوالات</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>سوال {{ question_number }} از {{ 16 }}</h1>
+        </div>
+
+        <div id="question-container">
+            <form id="question-form" method="POST">
+                <h3 id="question-text">{{ question }}</h3>
+                
+                {% if choices %}
+                    <ul id="choices-list">
+                    {% for choice in choices %}
+                        <li>
+                            <input type="radio" id="choice_{{ loop.index }}" name="choice" value="{{ choice }}">
+                            <label for="choice_{{ loop.index }}">{{ choice }}</label>
+                        </li>
+                    {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>No choices available for this question.</p>
+                {% endif %}
+                
+                <input type="submit" value="ارسال">
+                <div id="loading-message" style="display: none;">در حال ارسال...</div>
+            </form>
+        </div>
+
+        <script>
+            function attachFormSubmitHandler() {
+                document.getElementById('question-form').onsubmit = function(event) {
+                    event.preventDefault();  // Prevent form from submitting the usual way
+                
+                    let submitButton = document.querySelector('input[type="submit"]');
+                    let loadingMessage = document.getElementById('loading-message');
+                    loadingMessage.style.display = "block";  // Show loading message
+                    submitButton.disabled = true;  // Disable submit button
+
+                    // Get the selected choice
+                    let choiceElement = document.querySelector('input[name="choice"]:checked');
+                    if (!choiceElement) {
+                        alert("لطفا یکی از گزینه‌ها را انتخاب کنید.");
+                        loadingMessage.style.display = "none";  // Hide loading message
+                        submitButton.disabled = false;  // Re-enable if no choice selected
+                        return;
+                    }
+                    let choice = choiceElement.value;
+
+                    // Send the choice to the server via AJAX
+                    fetch(`/questions/{{ question_number }}`, {  // This URL needs to be dynamic, and we’ll update it below
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/x-www-form-urlencoded",
+                            "X-Requested-With": "XMLHttpRequest"
+                        },
+                        body: new URLSearchParams({ choice: choice })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        loadingMessage.style.display = "none";  // Hide loading message
+
+                        if (data.finished) {
+                            window.location.href = "/summary";  // Redirect if finished
+                        } else {
+                            // Update the question and choices
+                            updateQuestionAndChoices(data);  // Pass the new question and choices
+                        }
+                    })
+                    
+                    .catch(error => {
+                        console.error("Error submitting the choice:", error);
+                        alert("مشکلی در ارسال پاسخ وجود دارد. لطفا مجدداً تلاش کنید.");
+                        loadingMessage.style.display = "none";  // Hide loading message
+                        submitButton.disabled = false;  // Re-enable button if there's an error
+                    }); 
+                };
+            }
+
+            function updateQuestionAndChoices(data) {
+                // Update question text
+                document.getElementById('question-text').textContent = data.question;
+
+                // Update choices
+                let choicesHTML = "";
+                data.choices.forEach(function(choice, index) {
+                    choicesHTML += `
+                        <li>
+                            <input type="radio" id="choice_${index + 1}" name="choice" value="${choice}">
+                            <label for="choice_${index + 1}">${choice}</label>
+                        </li>`;
+                });
+                document.getElementById('choices-list').innerHTML = choicesHTML;
+
+                // Update the form's action URL with the new question number
+                document.getElementById('question-form').action = `/questions/${data.question_number}`;
+
+                // Re-enable the submit button
+                let submitButton = document.querySelector('input[type="submit"]');
+                submitButton.disabled = false;
+
+                // Reattach the submit handler for the new form content
+                attachFormSubmitHandler();
+            }
+
+            // Attach form submit handler when the page loads
+            attachFormSubmitHandler();
+        </script>
+        
+        
+    </div>
+</body>
+</html>

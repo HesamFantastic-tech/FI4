@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Registration</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <h1>Welcome to the Test</h1>
+    <p>Please register to proceed to the test.</p>
+
+    <!-- Registration Form -->
+    <form method="POST" action="/">
+        
+        <input type="text" name="first_name" placeholder="First Name" required>
+        <input type="text" name="last_name" placeholder="Last Name" required>
+        <input type="text" name="username" placeholder="Username" required>
+        <input type="text" name="phone_number" placeholder="Phone Number" required>
+        <input type="email" name="gmail_address" placeholder="Gmail Address" required>
+        <input type="text" name="post" placeholder="Post" required>
+        
+        <button type="submit">Register</button>
+    </form>
+    
+    {% if error %}
+    <p style="color: red;">{{ error }}</p>
+    {% endif %}
+</body>
+</html>

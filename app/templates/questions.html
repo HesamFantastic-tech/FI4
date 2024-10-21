@@ -79,12 +79,13 @@
                             updateQuestionAndChoices(data);  // Pass the new question and choices
                         }
                     })
+                    
                     .catch(error => {
                         console.error("Error submitting the choice:", error);
                         alert("مشکلی در ارسال پاسخ وجود دارد. لطفا مجدداً تلاش کنید.");
                         loadingMessage.style.display = "none";  // Hide loading message
                         submitButton.disabled = false;  // Re-enable button if there's an error
-                    });
+                    }); 
                 };
             }
 
